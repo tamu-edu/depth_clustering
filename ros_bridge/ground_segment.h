@@ -31,7 +31,7 @@ class GroundSegmenter : public rclcpp::Node {
         void pointcloud_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
 
-        Cloud::Ptr RosCloudToCloud(const PointCloud2::ConstPtr& msg);
+        Cloud::Ptr RosCloudToCloud(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
         DepthGroundRemover depth_ground_remover;
 

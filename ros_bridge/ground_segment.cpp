@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <iostream>
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -30,7 +31,8 @@ int main(int argc, char **argv)
 
 GroundSegmenter::GroundSegmenter() : Node("ground_segmenter_node") {
     pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            "/pointcloud", 10, std::bind(&GroundSegmenter::pointcloud_callback, this, _1));
+            // "/pointcloud", 10, std::bind(&GroundSegmenter::pointcloud_callback, this, _1));
+            "/pmd_royale_ros_camera_node/point_cloud_0", 10, std::bind(&GroundSegmenter::pointcloud_callback, this, _1));
 
     no_ground_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
             "/seg/no_ground", 10);
@@ -47,8 +49,11 @@ GroundSegmenter::GroundSegmenter() : Node("ground_segmenter_node") {
 
 // std::tuple<Cloud, Cloud> DepthGroundRemover::OnNewObjectReceived(const Cloud& cloud, const int) {
 void GroundSegmenter::pointcloud_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+  std::cout << "starting pc callback" << std::endl;
   Cloud::Ptr cloud_ptr = RosCloudToCloud(msg);
+  std::cout << "probe 1" << std::endl;
   auto [no_ground_cloud, ground_cloud] = depth_ground_remover.OnNewObjectReceived(*cloud_ptr.get(), 0);
+  std::cout << "probe 2" << std::endl;
 
   sensor_msgs::msg::PointCloud2 no_ground_cloud_msg;
   auto no_ground_cloud_pcl = *no_ground_cloud.ToPcl().get();
@@ -86,25 +91,34 @@ T BytesTo(const vector<uint8_t>& data, uint32_t start_idx) {
 }
 
 Cloud::Ptr GroundSegmenter::RosCloudToCloud(
-    const PointCloud2::ConstPtr& msg) {
-  uint32_t x_offset = msg->fields[0].offset;
-  uint32_t y_offset = msg->fields[1].offset;
-  uint32_t z_offset = msg->fields[2].offset;
-  uint32_t ring_offset = msg->fields[4].offset;
+    const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
 
-  Cloud cloud;
-  for (uint32_t point_start_byte = 0, counter = 0;
-       point_start_byte < msg->data.size();
-       point_start_byte += msg->point_step, ++counter) {
-    RichPoint point;
-    point.x() = BytesTo<float>(msg->data, point_start_byte + x_offset);
-    point.y() = BytesTo<float>(msg->data, point_start_byte + y_offset);
-    point.z() = BytesTo<float>(msg->data, point_start_byte + z_offset);
-    point.ring() = BytesTo<uint16_t>(msg->data, point_start_byte + ring_offset);
-    // point.z *= -1;  // hack
-    cloud.push_back(point);
-  }
+  pcl::PCLPointCloud2 pcl_pc2;
+  pcl_conversions::toPCL(*msg, pcl_pc2);
 
-  return boost::make_shared<Cloud>(cloud);
+  pcl::PointCloud<pcl::PointXYZL> pcl_cloud;
+  pcl::fromPCLPointCloud2(pcl_pc2, pcl_cloud);
+
+  return Cloud::FromPcl(pcl_cloud);
+
+
+  // uint32_t x_offset = msg->fields[0].offset;
+  // uint32_t y_offset = msg->fields[1].offset;
+  // uint32_t z_offset = msg->fields[2].offset;
+  // uint32_t ring_offset = msg->fields[4].offset;
+
+  // Cloud cloud;
+  // for (uint32_t point_start_byte = 0, counter = 0;
+  //      point_start_byte < msg->data.size();
+  //      point_start_byte += msg->point_step, ++counter) {
+  //   RichPoint point;
+  //   point.x() = BytesTo<float>(msg->data, point_start_byte + x_offset);
+  //   point.y() = BytesTo<float>(msg->data, point_start_byte + y_offset);
+  //   point.z() = BytesTo<float>(msg->data, point_start_byte + z_offset);
+  //   point.ring() = BytesTo<uint16_t>(msg->data, point_start_byte + ring_offset);
+  //   // point.z *= -1;  // hack
+  //   cloud.push_back(point);
+  // }
+
+  // return boost::make_shared<Cloud>(cloud);
 }
-

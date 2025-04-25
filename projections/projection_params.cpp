@@ -27,6 +27,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "utils/mem_utils.h"
 
@@ -88,6 +89,8 @@ bool ProjectionParams::valid() {
   bool cos_sin_empty = _row_angles_sines.empty() &&
                        _row_angles_cosines.empty() &&
                        _col_angles_sines.empty() && _col_angles_cosines.empty();
+  // std::cout << _v_span_params.valid() << std::endl;
+  // std::cout << _h_span_params.valid() << std::endl;
   if (!all_params_valid) {
     throw std::runtime_error("Projection parameters invalid.");
   }
@@ -165,7 +168,7 @@ std::unique_ptr<ProjectionParams> ProjectionParams::FLEXX2() {
   auto params = ProjectionParams();
   params.SetSpan(SpanParams(-28_deg, 28_deg, 0.25_deg),
                  SpanParams::Direction::HORIZONTAL);
-  params.SetSpan(SpanParams(22_deg, -22_deg, 0.25_deg),
+  params.SetSpan(SpanParams(-22_deg, 22_deg, 0.25_deg),
                  SpanParams::Direction::VERTICAL);
   params.FillCosSin();
   if (!params.valid()) {

@@ -24,6 +24,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <cmath>
 
 #include "utils/radians.h"
 #include "utils/useful_typedefs.h"
@@ -62,7 +64,10 @@ class SpanParams {
   const Radians& span() const { return _span; }
   int num_beams() const { return _num_beams; }
 
-  bool valid() const { return _num_beams > 0 && _span > 0_deg; }
+  bool valid() const {
+    // std::cout << _num_beams << " " << _span.val() << std::endl;
+    return _num_beams > 0 && _span > 0_deg;
+  }
 
  private:
   Radians _start_angle = 0_deg;
