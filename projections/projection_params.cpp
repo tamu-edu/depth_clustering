@@ -168,8 +168,9 @@ std::unique_ptr<ProjectionParams> ProjectionParams::FLEXX2() {
   auto params = ProjectionParams();
   params.SetSpan(SpanParams(-28_deg, 28_deg, 0.25_deg),
                  SpanParams::Direction::HORIZONTAL);
-  params.SetSpan(SpanParams(-22_deg, 22_deg, 0.25_deg),
+  params.SetSpan(SpanParams(-21_deg, 22_deg, 0.25_deg),
                  SpanParams::Direction::VERTICAL);
+  params.SetTOF(true);
   params.FillCosSin();
   if (!params.valid()) {
     fprintf(stderr, "ERROR: params are not valid!\n");

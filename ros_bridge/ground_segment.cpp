@@ -1,10 +1,13 @@
 // #include <eigen_conversions/eigen_msg.h>
 #include <eigen3/Eigen/Dense>
 
+#include <opencv2/opencv.hpp>
+
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -23,7 +26,10 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<GroundSegmenter>();
-    rclcpp::spin(node);
+    while (rclcpp::ok()) {
+      rclcpp::spin_some(node);
+      std::this_thread::sleep_for(std::chrono::milliseconds(33));
+    }
     rclcpp::shutdown();
     return 0;
 }
@@ -40,7 +46,7 @@ GroundSegmenter::GroundSegmenter() : Node("ground_segmenter_node") {
     ground_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
             "/seg/ground", 10);
 
-    auto proj_params_ptr = ProjectionParams::FLEXX2();
+    proj_params_ptr = ProjectionParams::FLEXX2();
     Radians ground_remove_angle = 7_deg;
     int smooth_window_size = 9;
     depth_ground_remover = DepthGroundRemover(*proj_params_ptr, ground_remove_angle, smooth_window_size);
@@ -51,9 +57,9 @@ GroundSegmenter::GroundSegmenter() : Node("ground_segmenter_node") {
 void GroundSegmenter::pointcloud_callback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
   std::cout << "starting pc callback" << std::endl;
   Cloud::Ptr cloud_ptr = RosCloudToCloud(msg);
-  std::cout << "probe 1" << std::endl;
+  // std::cout << "probe 1" << std::endl;
   auto [no_ground_cloud, ground_cloud] = depth_ground_remover.OnNewObjectReceived(*cloud_ptr.get(), 0);
-  std::cout << "probe 2" << std::endl;
+  // std::cout << "probe 2" << std::endl;
 
   sensor_msgs::msg::PointCloud2 no_ground_cloud_msg;
   auto no_ground_cloud_pcl = *no_ground_cloud.ToPcl().get();
@@ -61,7 +67,7 @@ void GroundSegmenter::pointcloud_callback(const sensor_msgs::msg::PointCloud2::S
   pcl::toPCLPointCloud2(no_ground_cloud_pcl, no_ground_cloud_pc2);
   pcl_conversions::fromPCL(no_ground_cloud_pc2, no_ground_cloud_msg);
   no_ground_cloud_msg.header.stamp = this->get_clock()->now();
-  no_ground_cloud_msg.header.frame_id = "no ground pointcloud";
+  no_ground_cloud_msg.header.frame_id = "no_ground_pointcloud";
 
   sensor_msgs::msg::PointCloud2 ground_cloud_msg;
   auto ground_cloud_pcl = *ground_cloud.ToPcl().get();
@@ -69,7 +75,7 @@ void GroundSegmenter::pointcloud_callback(const sensor_msgs::msg::PointCloud2::S
   pcl::toPCLPointCloud2(ground_cloud_pcl, ground_cloud_pc2);
   pcl_conversions::fromPCL(ground_cloud_pc2, ground_cloud_msg);
   ground_cloud_msg.header.stamp = this->get_clock()->now();
-  ground_cloud_msg.header.frame_id = "ground pointcloud";
+  ground_cloud_msg.header.frame_id = "ground_pointcloud";
 
   no_ground_pub_->publish(no_ground_cloud_msg);
   ground_pub_->publish(ground_cloud_msg);
@@ -93,13 +99,27 @@ T BytesTo(const vector<uint8_t>& data, uint32_t start_idx) {
 Cloud::Ptr GroundSegmenter::RosCloudToCloud(
     const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
 
+
   pcl::PCLPointCloud2 pcl_pc2;
   pcl_conversions::toPCL(*msg, pcl_pc2);
 
   pcl::PointCloud<pcl::PointXYZL> pcl_cloud;
   pcl::fromPCLPointCloud2(pcl_pc2, pcl_cloud);
+  if (!proj_params_ptr->is_tof()) {
+    return Cloud::FromPcl(pcl_cloud);
+  } else {
+    // std::cout << "pcl cloud width " << pcl_cloud.width << std::endl;
+    cv::Mat image(pcl_cloud.width, pcl_cloud.height, CV_32F);
+    for (uint32_t i = 0; i < pcl_cloud.width; ++i) {
+      for (uint32_t j = 0; j < pcl_cloud.height; ++j) {
+        pcl::PointXYZL point = pcl_cloud.at(i, j);
+        image.at<float>(i, j) = point.z;
+      }
+    }
 
-  return Cloud::FromPcl(pcl_cloud);
+    auto final_cloud_ptr = Cloud::FromImage(image, *proj_params_ptr);
+    return final_cloud_ptr;
+  }
 
 
   // uint32_t x_offset = msg->fields[0].offset;

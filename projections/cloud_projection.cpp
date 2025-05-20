@@ -68,6 +68,8 @@ void CloudProjection::CheckImageAndStorage(const cv::Mat& image) {
   if (this->_data.size() < 1) {
     throw std::length_error("_data size is < 1");
   }
+  // std::cout << this->rows() << " " << image.rows << std::endl;
+  // std::cout << this->cols() << " " << image.cols << std::endl;
   if (this->rows() != static_cast<size_t>(image.rows) ||
       this->cols() != static_cast<size_t>(image.cols)) {
     throw std::length_error("_data dimentions do not correspond to image ones");

@@ -86,7 +86,9 @@ class ProjectionParams {
   using ConstPtr = const shared_ptr<const ProjectionParams>;
 
   enum class Set { COLS, ROWS };
-  ProjectionParams() {}
+  ProjectionParams() {
+    _is_tof = false;
+  }
   ~ProjectionParams() {}
 
   /**
@@ -109,6 +111,11 @@ class ProjectionParams {
   void SetSpan(const std::vector<SpanParams>& span_params,
                const SpanParams::Direction& direction);
 
+  void SetTOF(const bool is_tof) {
+    _is_tof = is_tof;
+  }
+
+
   inline const Radians& v_start_angle() const {
     return _v_span_params.start_angle();
   }
@@ -127,6 +134,7 @@ class ProjectionParams {
   inline size_t rows() const { return _row_angles.size(); }
   inline size_t cols() const { return _col_angles.size(); }
   inline size_t size() const { return rows() * cols(); }
+  inline bool is_tof() const { return _is_tof; }
 
   /**
    * @brief      Get angle from row
@@ -237,6 +245,8 @@ class ProjectionParams {
 
   std::vector<float> _row_angles_sines;
   std::vector<float> _row_angles_cosines;
+
+  bool _is_tof;
 };
 
 }  // namespace depth_clustering

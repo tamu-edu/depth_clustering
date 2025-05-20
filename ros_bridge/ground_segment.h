@@ -35,5 +35,7 @@ class GroundSegmenter : public rclcpp::Node {
 
         DepthGroundRemover depth_ground_remover;
 
+        std::unique_ptr<ProjectionParams> proj_params_ptr;
+
 };
 #endif // GROUND_SEGMENTER_H_
